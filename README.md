@@ -161,7 +161,8 @@ into the diffuse albedo buffer to keep the denoiser from removing desired detail
 
 DLSS-RR expects matrices in row-major memory layout. These matrices are expected to be left-multiplied with row vectors:
 
-$$\begin{bmatrix} 
+```math 
+\begin{bmatrix} 
 x_1 & x_2 & x_3 & x_4
 \end{bmatrix}
 \begin{bmatrix} 
@@ -172,12 +173,12 @@ a_{41} & a_{42} & a_{43} & a_{44}
 \end{bmatrix} =
 \begin{bmatrix}
 x_1' & x_2' & x_3' & x_4'
-\end{bmatrix}$$
-
+\end{bmatrix}
+````
 
 Contrast this with GLM's column-major, right-multiply matrices:
 
-$$
+```math
 \begin{bmatrix} 
 a_{11} & a_{12} & a_{13} & a_{14} \\
 a_{21} & a_{22} & a_{23} & a_{24} \\
@@ -185,12 +186,19 @@ a_{31} & a_{32} & a_{33} & a_{34} \\
 a_{41} & a_{42} & a_{43} & a_{44}
 \end{bmatrix} 
 \begin{bmatrix} 
-x_1 \\ x_2 \\ x_3 \\x_4
+x_1 \\
+x_2 \\
+x_3 \\
+x_4
 \end{bmatrix}
 =
 \begin{bmatrix}
-x_1' \\ x_2' \\x_3' \\x_4'
-\end{bmatrix}$$
+x_1' \\
+x_2' \\
+x_3' \\
+x_4'
+\end{bmatrix}
+```
 
 As it happens to be, the required transpose operations to convert from one to the other results in identity; thus the sample passes the GLM matrices straight into DLSS-RR.
 
