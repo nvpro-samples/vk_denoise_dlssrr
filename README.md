@@ -2,9 +2,9 @@
  
 ![A screenshot of the sample. It shows a path-traced Cornell box, denoised using DLSS_RR_.](docs/dlss_denoiser.png)
 
-This example demonstrates DLSS_RR ("Deep Learning Super Sampling Ray Reconstruction")
-in a simple path tracer rendering a glTF scene. DLSS_RR combines a denoiser, upscaler and
-temporal antialiasing all in one package. Simplified, this means: present DLSS_RR with a series
+This example demonstrates DLSS-RR ("Deep Learning Super Sampling Ray Reconstruction")
+in a simple path tracer rendering a glTF scene. DLSS-RR combines a denoiser, upscaler and
+temporal antialiasing all in one package. Simplified, this means: present DLSS-RR with a series
 of noisy, jittered low resolution images and it will output a denoised, upscaled and jitter-free image.
 
 ## Building 
@@ -78,10 +78,10 @@ supports packed or separate normal and roughness textures). This means, there's 
 much, especially if one had a denoiser already integrated. Overall, DLSS-RR's approach greatly simplifies the
 integration with an existing Vulkan backend.
 
-### DlssWrapper
+### DLSS-RR wrapper classes
 
-Included in this sample come two classes "NgxWrapper" and "DlssRR".
-* "NgxWrapper" is responsible for creating a NGX context, querying the availability 
+Included in this sample come two classes "NgxContext" and "DlssRR".
+* "NgxContext" is responsible for creating a NGX context, querying the availability 
 of the DLSS-RR feature and acting as factory for the DlssRR class.
 * DlssRR is used to setup and perform the upscaling-denoising.
 
@@ -100,33 +100,33 @@ Beware: there are some inconsistencies when the SDK and headers refer to DLSS-RR
 with `_D` to refer to the DLSS_RR functions. The functions without the prefix actually only apply to DLSS, which is the
 older supersampling-antialising solution. Sometimes the DLSS-RR feature is also referred to by just "RayReconstruction".
 
-The two wrapper classes don't cover all functionality DLSS-RR can offer (refer to the [*DLSS_RR Integration Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS-RR%20Integration%20Guide%20API.pdf) to learn
+The two wrapper classes don't cover all functionality DLSS-RR can offer (refer to the [*DLSS-RR Integration Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS-RR%20Integration%20Guide%20API.pdf) to learn
 about additional guide buffers and settings), but are small enough to be quickly adopted and modified for your own needs.
 Beware that the DLSS Integration Guide is thought to be addendum to the [*DLSS Programming Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS_Programming_Guide_Release.pdf)
 
 Features not covered in this sample
 * Providing more optional guide buffers besides the `RESOURCE_SPECULAR_HITDISTANCE`
-* Usage of hardware depth buffer formats (`VK_FORMAT_D24_UNORM_S8_UINT` and the like)
+* Usage of 'hardware depth buffer' depth encoding in NDC coordinates ```math P.z / P.w ```
 * multi-GPU support
 
 ## DLSS-RR input textures
 
-DLSSWWrapper takes a number of textures ('resources' in DLSS_RR lingo) to forward to DLSS_RR later on. Here is a
-description of what data each resource represents. Refer to the *DLSS_RR Integration Guide* for further information on each
+The DlssRR class takes a number of textures ('resources' in DLSS-RR lingo) to forward to DLSS-RR later on. Here is a
+description of what data each resource represents. Refer to the *DLSS-RR Integration Guide* for further information on each
 resource.
 
 * `RESOURCE_COLOR_IN`: this texture contains the noisy input image to the denoiser. In this sample, its the output of the pathtracer.
 * `RESOURCE_COLOR_OUT`: this is the output texture of the denoiser, upscaled to output size
-* `RESOURCE_DIFFUSE_ALBEDO`: this texture contains the diffuse albedo 
-* `RESOURCE_SPECULAR_ALBEDO`: this texture contains the specular reflectance for the current point of view, integrated over the surface's hemisphere. The DLSS_RR SDK contains a formula for computing an approximation of this term.
-* `RESOURCE_NORMALROUGHNESS`: normal and material roughness packed into a 4D vector. The normal vector should be between [-1..1] and roughness in linear space.
+* `RESOURCE_DIFFUSE_ALBEDO`: this texture contains the diffuse albedo
+* `RESOURCE_SPECULAR_ALBEDO`: this texture contains the specular reflectance for the current point of view, integrated over the surface's hemisphere. The DLSS-RR SDK contains a formula for computing an approximation of this term.
+* `RESOURCE_NORMALROUGHNESS`: normal and material roughness packed into a 4D vector. The normal vector should be between [-1..1] and roughness is linear.
 * `RESOURCE_MOTIONVECTOR`: this texture contains screenspace 2D vectors, pointing from the current pixel position back to "where this pixel was in the last frame"
-* `RESOURCE_LINEARDEPTH`: this is the linear depth of the primary hit position in camera space. For example, `float z = (worldToView * hitPosition).z` yields the desired value.
+* `RESOURCE_LINEARDEPTH`: this is the linear depth of the primary hit position in camera space. For example, ```math float z = -(worldToView * hitPosition).z``` yields the desired value.
 * `RESOURCE_SPECULAR_HITDISTANCE`: this texture contains the distance from the primary hit surface to the first secondary hit. This is an optional guide buffer; complementary to specular motion vectors. Providing specular motion vectors is superior.
 
 With the exception of `RESOURCE_COLOR_OUT`, all input buffers are presented in the (smaller) render resolution.
 `RESOURCE_COLOR_OUT` has the desired output resolution. In addition, the pathtracer will produce jittered primary
-samples. DLSS_RR will take care of the upscaling and compensate for the jitter during the denoising process.
+samples. DLSS-RR will take care of the upscaling and compensate for the jitter during the denoising process.
 
 ## DLSS-RR Tips & Tricks
 
@@ -139,23 +139,15 @@ samples. DLSS_RR will take care of the upscaling and compensate for the jitter d
 * _DLSS RR/Presets_ and _DLSS RR/Quality_ determine the (AI) model in use and quality setting
 * _DLSS RR/Input Width_ and _DLSS RR/Input Width_ lets you play with the size of the input buffers in the range the chosen quality setting allows for
 
-### Mirror-like surfaces
+### Depth values
 
-Mirror-like surfaces work better with a special treatment. Instead of recording the position and hit parameters at the
-surface of the mirror, we continue following the mirrored ray until it hits something that is not a mirror - the
-_Primary Surface Replacement (PSR)_. It looks like as if we can see the mirrored objects appear "behind" the mirror as
-though the mirror acts as kind of a portal into a virtual world. The G-Buffer records the data of the PSR at its
-virtual world space, such as Normal, Roughness and ViewZ. This improves denoising reflected objects.
-
-Look into `shaders/primary.rgen` for `#PSR` to find the shader code that implements
-primary surface replacement.
-
-### Sky
-
-For the sky to not show trailing artifacts, you _must_ provide motion vectors for the sky (in particular covering the
-camera's rotation). In this sample, we simply project the view vector as "point on sky projected to infinity" back into
-the previous frame to obtain motion vectors for the sky. In addition, we bake a tonemapped color value for the sky
-into the diffuse albedo buffer to keep the denoiser from removing desired detail in the sky.
+Pass either HW depth buffer _or_ view space (linear) depth. The HW depth range must be in [0, 1] range, while the linear depth is unbounded.
+```math 
+hw_depth = clip_space.Z / clip_space.W
+```
+Pass 'NVSDK_NGX_DLSS_Feature_Flags_DepthInverted' flag if smaller values of the passed depth buffer are further away.
+Prefer HW depth buffer. This is just for performance, and for matching buffers with DLSS-SR.
+Prefer 32 bit depth, but 16 bit can also work. This is due to depth precision.
 
 ### Matrices
 
@@ -202,6 +194,24 @@ x_4'
 
 As it happens to be, the required transpose operations to convert from one to the other results in identity; thus the sample passes the GLM matrices straight into DLSS-RR.
 
+### Sky
+
+For the sky to not show trailing artifacts, you _must_ provide motion vectors for the sky (in particular covering the
+camera's rotation). In this sample, we simply project the view vector as "point on sky projected to infinity" back into
+the previous frame to obtain motion vectors for the sky. In addition, we bake a tonemapped color value for the sky
+into the diffuse albedo buffer to keep the denoiser from removing desired detail in the sky.
+
+### Mirror-like surfaces
+
+Mirror-like surfaces work better with a special treatment. Instead of recording the position and hit parameters at the
+surface of the mirror, we continue following the mirrored ray until it hits something that is not a mirror - the
+_Primary Surface Replacement (PSR)_. It looks like as if we can see the mirrored objects appear "behind" the mirror as
+though the mirror acts as kind of a portal into a virtual world. The G-Buffer records the data of the PSR at its
+virtual world space, such as Normal, Roughness and ViewZ. This improves denoising reflected objects.
+
+Look into `shaders/primary.rgen` for `#PSR` to find the shader code that implements
+primary surface replacement.
+
 ### MIS weighting
 
 The implemented path tracer uses importance sampling to estimate the integral in the [rendering
@@ -219,8 +229,7 @@ MIS weights for both contributions.
 
 Tags:
 
-- raytracing, path-tracing, GLTF, HDR, tonemapper, picking, BLAS, TLAS, PBR
-material, denoising, DLSS_RR
+- raytracing, path-tracing, GLTF, HDR, tonemapper, picking, BLAS, TLAS, PBR material, denoising, DLSS-RR
 
 Extensions:
 
