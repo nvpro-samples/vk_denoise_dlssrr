@@ -1,6 +1,6 @@
 # Integration of DLSS-RR into a Vulkan Application
  
-![A screenshot of the sample. It shows a path-traced Cornell box, denoised using DLSS_RR_.](docs/dlss_denoiser.png)
+![A screenshot of the sample. It shows a path-traced scene, denoised using DLSS-RR_.](docs/dlss_denoiser.png)
 
 This example demonstrates DLSS-RR ("Deep Learning Super Sampling Ray Reconstruction")
 in a simple path tracer rendering a glTF scene. DLSS-RR combines a denoiser, upscaler and
@@ -9,16 +9,13 @@ of noisy, jittered low resolution images and it will output a denoised, upscaled
 
 ## Building 
 
-You need the [nvpro_core](https://github.com/nvpro-samples/nvpro_core)
-repository checked out next to the vk_denoise_dlssrr sample. At configuration time
-CMake will look for the nvpro_core repo and include it into the build. Follow
-the general CMake process to configure and build the sample.
-
-The CMake script will automatically pull the DLSS_RR SDK from [https://github.com/NVIDIA/DLSS](https://github.com/NVIDIA/DLSS)
+Follow the general CMake process to configure and build the sample.
+Dependencies will be automatically fetched, in particular the  DLSS-RR SDK will be
+automatically pulled from [https://github.com/NVIDIA/DLSS](https://github.com/NVIDIA/DLSS)
 
 ## CMake integration
 
-CMakeLists.txt is using `FetchContent` to pull the DLSS-RR SDK at configuration time. Since DLSS_RR itself does not offer
+CMakeLists.txt is using `FetchContent` to pull the DLSS-RR SDK at configuration time. Since DLSS-RR itself does not offer
 direct CMake integration and comes as a "snippet" which plugs into the NGX framework, a small cmake script `ngx.cmake` is used to
 add NGX as imported library to the CMake build.
 
@@ -40,7 +37,7 @@ FetchContent_MakeAvailable(
 )
 
 #Steer NGX_SDK_ROOT to the downloaded SDK
-option(NGX_SDK_ROOT "Path to NGX/DLSS_RR SDK" "${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk/")
+option(NGX_SDK_ROOT "Path to NGX/DLSS-RR SDK" "${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk/")
 set(NGX_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk/")
 
 #Find NGX
@@ -52,7 +49,7 @@ include(cmake/ngx.cmake)
 target_link_libraries(${PROJECT_NAME} ngx)
 
 ...
-# At install time, copy the DLSS_RR plugin libraries next to the executable
+# At install time, copy the DLSS-RR plugin libraries next to the executable
 get_target_property(DLSS_LIBS ngx EXTRA_DLLS)
 
 # Install DLSS_RR libraries as part of the INSTALL build target
@@ -97,7 +94,7 @@ DlssRR wrapper is making use of the Vulkan specific NGX and DLSS-RR headers
 * nvsdk_ngx_helpers_dlssd.h
 
 Beware: there are some inconsistencies when the SDK and headers refer to DLSS-RR. Sometimes function calls are prefixed
-with `_D` to refer to the DLSS_RR functions. The functions without the prefix actually only apply to DLSS, which is the
+with `_D` to refer to the DLSS-RR functions. The functions without the prefix actually only apply to DLSS, which is the
 older supersampling-antialising solution. Sometimes the DLSS-RR feature is also referred to by just "RayReconstruction".
 
 The two wrapper classes don't cover all functionality DLSS-RR can offer (refer to the [*DLSS-RR Integration Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS-RR%20Integration%20Guide%20API.pdf) to learn
@@ -147,7 +144,7 @@ hw_depth = clip_space.Z / clip_space.W
 ```
 Pass 'NVSDK_NGX_DLSS_Feature_Flags_DepthInverted' flag if smaller values of the passed depth buffer are further away.
 Prefer HW depth buffer. This is just for performance, and for matching buffers with DLSS-SR.
-Prefer 32 bit depth, but 16 bit can also work. This is due to depth precision.
+Prefer 32 bit depth, but 16 bit can also work albeit might exhibit depth precision issues.
 
 ### Matrices
 
@@ -209,7 +206,7 @@ _Primary Surface Replacement (PSR)_. It looks like as if we can see the mirrored
 though the mirror acts as kind of a portal into a virtual world. The G-Buffer records the data of the PSR at its
 virtual world space, such as Normal, Roughness and ViewZ. This improves denoising reflected objects.
 
-Look into `shaders/primary.rgen` for `#PSR` to find the shader code that implements
+Look into `shaders/primary__rgen.slang` for `#PSR` to find the shader code that implements
 primary surface replacement.
 
 ### MIS weighting
@@ -229,7 +226,7 @@ MIS weights for both contributions.
 
 Tags:
 
-- raytracing, path-tracing, GLTF, HDR, tonemapper, picking, BLAS, TLAS, PBR material, denoising, DLSS-RR
+- raytracing, path-tracing, GLTF, HDR, tonemapper, picking, BLAS, TLAS, PBR material, denoising, DLSS-RR, Slang
 
 Extensions:
 

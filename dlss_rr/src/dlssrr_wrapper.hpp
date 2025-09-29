@@ -20,15 +20,15 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "nvvk/resourceallocator_vk.hpp"
-
 #include "nvsdk_ngx_vk.h"
+#include "nvsdk_ngx_defs_dlssd.h"
 
 #include <glm/glm.hpp>
 
-#include <string>
-#include <vector>
 #include <array>
+#include <filesystem>
+#include <vector>
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,12 +58,14 @@ public:
     VkInstance       instance       = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice         device         = VK_NULL_HANDLE;
+    VkQueue          queue          = VK_NULL_HANDLE;
+    uint32_t         queueFamilyIdx = 0;
 #ifdef NDEBUG
     NVSDK_NGX_Logging_Level loggingLevel = NVSDK_NGX_LOGGING_LEVEL_OFF;
 #else
-    NVSDK_NGX_Logging_Level loggingLevel = NVSDK_NGX_LOGGING_LEVEL_ON;
+    NVSDK_NGX_Logging_Level loggingLevel = NVSDK_NGX_LOGGING_LEVEL_VERBOSE;
 #endif
-    std::string applicationPath;  // directory to store temporary files and logs in
+    std::filesystem::path applicationPath;  // directory to store temporary files and logs in
   };
 
   // Initialize the NGX context on the given Vulkan device
@@ -71,10 +73,6 @@ public:
 
   // Do not destroy NgxContext before all instances of DLSS_RR are destroyed.
   void deinit();
-
-  // Check if DLSS_RR is available and createDlssRR() can be called
-  NVSDK_NGX_Result isDlssRRAvailable();
-
 
   struct SupportedSizes
   {
@@ -93,13 +91,16 @@ public:
 
   struct DlssRRInitInfo
   {
-    VkExtent2D                        inputSize  = {};  // dimensions of the noisy input textures.
-    VkExtent2D                        outputSize = {};  // dimensions of the output after denoising.
-    NVSDK_NGX_PerfQuality_Value       quality    = NVSDK_NGX_PerfQuality_Value_MaxQuality;
-    NVSDK_NGX_DLSS_Hint_Render_Preset preset     = NVSDK_NGX_DLSS_Hint_Render_Preset_Default;
+    VkExtent2D                                     inputSize  = {};  // dimensions of the noisy input textures.
+    VkExtent2D                                     outputSize = {};  // dimensions of the output after denoising.
+    NVSDK_NGX_PerfQuality_Value                    quality    = NVSDK_NGX_PerfQuality_Value_MaxQuality;
+    NVSDK_NGX_RayReconstruction_Hint_Render_Preset preset     = NVSDK_NGX_RayReconstruction_Hint_Render_Preset_Default;
   };
   // Initialize a DlssRR instance. There can be multiple.
   NVSDK_NGX_Result initDlssRR(const DlssRRInitInfo& initInfo, DlssRR& dlssrr);
+
+  // Check if DLSS_RR is available and createDlssRR() can be called
+  static NVSDK_NGX_Result isDlssRRAvailable(VkInstance instance, VkPhysicalDevice physicalDevice);
 
   // Append 'extensions' with the instance extensions that should be enabled for DLSS_RR
   static NVSDK_NGX_Result getDlssRRRequiredInstanceExtensions(std::vector<VkExtensionProperties>& extensions);
@@ -117,8 +118,10 @@ private:
   NgxContext& operator=(const NgxContext&&) = delete;
 
   VkDevice             m_device    = VK_NULL_HANDLE;
+  VkQueue              m_queue     = VK_NULL_HANDLE;
   NVSDK_NGX_Parameter* m_ngxParams = nullptr;
   std::wstring         m_applicationPath;
+  uint32_t             m_queueFamilyIdx = 0;
 };
 
 
@@ -170,7 +173,7 @@ public:
 
 private:
   friend class NgxContext;
-  NVSDK_NGX_Result init(VkDevice device, NVSDK_NGX_Parameter* ngxParams, const NgxContext::DlssRRInitInfo& info);
+  NVSDK_NGX_Result init(VkDevice device, VkQueue queue, uint32_t queueFamilyIdx, NVSDK_NGX_Parameter* ngxParams, const NgxContext::DlssRRInitInfo& info);
 
   // We don't provide proper operators, so forbid copying & moving for now
   DlssRR(const DlssRR&)             = delete;

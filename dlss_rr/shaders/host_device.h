@@ -22,26 +22,19 @@
 
 #define GRID_SIZE 16  // Grid size used by compute shaders
 
+#include "nvshaders/slang_types.h"
+#include "nvshaders/gltf_scene_io.h.slang"
+#include "nvshaders/sky_io.h.slang"
+
 // clang-format off
 #ifdef __cplusplus
-  #include <glm/glm.hpp>
-  using uint = uint32_t;
-
-  using mat4 = glm::mat4;
-  using vec4 = glm::vec4;
-  using vec3 = glm::vec3;
-  using vec2 = glm::vec2;
-  using ivec2 = glm::ivec2;
-  using uint = uint32_t;
+#include <vulkan/vulkan_core.h>
 #endif  // __cplusplus
 
-#ifdef __cplusplus // Descriptor binding helper for C++ and GLSL
- #define START_BINDING(a) enum a {
- #define END_BINDING() }
-#else
- #define START_BINDING(a)  const uint
- #define END_BINDING() 
-#endif
+NAMESPACE_SHADERIO_BEGIN()
+
+#define START_BINDING(a) enum a {
+#define END_BINDING() }
 
 #define NB_LIGHTS 0
 
@@ -57,41 +50,32 @@
 #define MISSINDEX_SECONDARY 1
 
 START_BINDING(SceneBindings)
-  eFrameInfo = 0,
-  eSceneDesc = 1,
-  eTextures  = 2
+  eTextures
 END_BINDING();
 
 START_BINDING(RtxBindings)
-  eTlas     = 0
+  eTlas
 END_BINDING();
 
-START_BINDING(PostBindings)
-  ePostImage       = 0
+START_BINDING(DlssBindings)
+  eViewZ,
+  eMotionVectors,
+  eNormal_Roughness,
+  eBaseColor_Metalness,
+  eSpecAlbedo,
+  eColor,
+  eSpecHitDist
 END_BINDING();
 
-START_BINDING(RTBindings)
-  eViewZ            = 0,
-  eMotionVectors     = 1,
-  eNormal_Roughness = 2,
-  eBaseColor_Metalness = 3,
-  eSpecAlbedo       = 4,
-  eColor            = 5,
-  eSpecHitDist      = 6
-END_BINDING();
 
-START_BINDING(TaaBindings)
-  eInImage = 0,
-  eOutImage  = 1
-END_BINDING();
 // clang-format on
 
 struct Light
 {
-  vec3  position;
-  float intensity;
-  vec3  color;
-  int   type;
+  float3 position;
+  float  intensity;
+  float3 color;
+  int    type;
 };
 
 #define TEST_FLAG(flags, flag) bool((flags) & (flag))
@@ -105,15 +89,15 @@ struct Light
 
 struct FrameInfo
 {
-  mat4  view;
-  mat4  proj;
-  mat4  viewInv;
-  mat4  projInv;
-  mat4  prevMVP;
-  vec4  envIntensity;
-  vec2  jitter;
-  float envRotation;
-  uint  flags;  // beware std430 layout requirements
+  float4x4 view;
+  float4x4 proj;
+  float4x4 viewInv;
+  float4x4 projInv;
+  float4x4 prevMVP;
+  float4   envIntensity;
+  float2   jitter;
+  float    envRotation;
+  uint     flags;  // beware std430 layout requirements
 #if NB_LIGHTS > 0
   Light light[NB_LIGHTS];
 #endif
@@ -127,17 +111,23 @@ struct RtxPushConstant
   float meterToUnitsMultiplier;
   float overrideRoughness;
   float overrideMetallic;
-  ivec2 mouseCoord;
+  int2  mouseCoord;
   float bitangentFlip;
+
+  FrameInfo*             frameInfo;  // Camera info
+  SkyPhysicalParameters* skyParams;  // Sky physical parameters
+  GltfScene*             gltfScene;  // GLTF scene
 };
 
 #ifdef __cplusplus
-#include <vulkan/vulkan_core.h>
 
 inline VkExtent2D getGridSize(const VkExtent2D& size)
 {
   return VkExtent2D{(size.width + (GRID_SIZE - 1)) / GRID_SIZE, (size.height + (GRID_SIZE - 1)) / GRID_SIZE};
 }
+
+NAMESPACE_SHADERIO_END()
+
 #endif
 
 #endif  // HOST_DEVICE_H

@@ -26,7 +26,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NO_EXTERNAL_IMAGE
-#include "tiny_gltf.h"
+#include <tinygltf/tiny_gltf.h>
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
+#include <tinyobjloader/tiny_obj_loader.h>
