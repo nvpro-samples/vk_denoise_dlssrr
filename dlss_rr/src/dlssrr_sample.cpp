@@ -1465,8 +1465,9 @@ int main(int, char**)
   app.addElement(std::make_shared<nvapp::ElementDefaultMenu>());  // Menu / Quit
 
   // Search paths
+  const std::filesystem::path        exeDir               = nvutils::getExecutablePath().parent_path();
   std::vector<std::filesystem::path> default_search_paths = {
-      ".", "..", "../..", "../../..", nvutils::getExecutablePath().parent_path() / TARGET_EXE_TO_DOWNLOAD_DIRECTORY};
+      ".", "..", "../..", "../../..", exeDir / TARGET_EXE_TO_DOWNLOAD_DIRECTORY, exeDir / "resources"};
 
   // Load HDR
   std::filesystem::path hdr_file = nvutils::findFile(R"(environment.hdr)", default_search_paths);

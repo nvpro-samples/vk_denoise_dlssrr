@@ -15,53 +15,26 @@ automatically pulled from [https://github.com/NVIDIA/DLSS](https://github.com/NV
 
 ## CMake integration
 
-CMakeLists.txt is using `FetchContent` to pull the DLSS-RR SDK at configuration time. Since DLSS-RR itself does not offer
-direct CMake integration and comes as a "snippet" which plugs into the NGX framework, a small cmake script `ngx.cmake` is used to
-add NGX as imported library to the CMake build.
+`CMakeLists.txt` uses nvpro_core's [`ngx.cmake`]() script to download the DLSS-RR
+SDK at configuration time. Since DLSS-RR itself does not offer direct CMake
+integration and comes as a "snippet" which plugs into the NGX framework,
+`nvpro_core2/ngx.cmake` adds NGX as an imported library to the CMake build.
+
+`dlss_rr/CMakeLists.txt` then copies the DLSS shared libraries to the build and
+install directories:
 
 ```
-# CMake module FetchContent
-include(FetchContent)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-FetchContent_Declare(
-    DLSS_SDK
-    GIT_REPOSITORY https://github.com/NVIDIA/DLSS.git
-    GIT_TAG "v310.1.0"
-    GIT_SHALLOW
-    GIT_SUBMODULES
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk
-)
-
-FetchContent_MakeAvailable(
-    DLSS_SDK
-)
-
-#Steer NGX_SDK_ROOT to the downloaded SDK
-option(NGX_SDK_ROOT "Path to NGX/DLSS-RR SDK" "${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk/")
-set(NGX_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/externals/dlss_sdk/")
-
-#Find NGX
-include(cmake/ngx.cmake)
+# NGX (DLSS) dependency
+find_package(NGX REQUIRED)
 
 ...
 
-# Link against NGX/DLSS
-target_link_libraries(${PROJECT_NAME} ngx)
-
-...
-# At install time, copy the DLSS-RR plugin libraries next to the executable
-get_target_property(DLSS_LIBS ngx EXTRA_DLLS)
-
-# Install DLSS_RR libraries as part of the INSTALL build target
-install(FILES "${DLSS_LIBS}" CONFIGURATIONS Release RelWithDebInfo MinSizeRel DESTINATION bin_${ARCH})
-install(FILES "${DLSS_LIBS}" CONFIGURATIONS Debug DESTINATION bin_${ARCH}_debug)_
-
-# Copy the DLSS_RR libraries to the intermediate build directories as well
-add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy
-                            "${DLSS_LIBS}"
-                            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-                    COMMAND_EXPAND_LISTS)
+copy_to_runtime_and_install(${PROJECT_NAME}
+  FILES ${DLSS_DLLS}
+  AUTO
+)
 ```
 
 ## Integration of DLSS-RR

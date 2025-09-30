@@ -76,17 +76,11 @@ download_files(FILENAMES "daytime.hdr" "environment.hdr" "hdri-19_color_small.hd
 add_project_definitions(${PROJECT_NAME})
 
 
-get_target_property(DLSS_LIBS ngx EXTRA_DLLS)
-# Copy the DLSS_RR libraries to the intermediate build directories as well
-add_custom_command( TARGET ${PROJECT_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy
-                            "${DLSS_LIBS}"
-                            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-                    COMMAND_EXPAND_LISTS)
-
-# Install DLSS_RR libraries as part of the INSTALL build target
-install(FILES "${DLSS_LIBS}" CONFIGURATIONS Release RelWithDebInfo MinSizeRel DESTINATION bin_${ARCH})
-install(FILES "${DLSS_LIBS}" CONFIGURATIONS Debug DESTINATION bin_${ARCH}_debug)
-
 # Make Visual Studio use this project as the startup project
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+
+# Install dependencies (including DLSS)
+copy_to_runtime_and_install(${PROJECT_NAME}
+  FILES ${DLSS_DLLS}
+  AUTO
+)
