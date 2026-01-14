@@ -66,13 +66,13 @@ DlssRR wrapper is making use of the Vulkan specific NGX and DLSS-RR headers
 * nvsdk_ngx_defs_dlssd.h
 * nvsdk_ngx_helpers_dlssd.h
 
-Beware: there are some inconsistencies when the SDK and headers refer to DLSS-RR. Sometimes function calls are prefixed
-with `_D` to refer to the DLSS-RR functions. The functions without the prefix actually only apply to DLSS, which is the
+Beware: there are some inconsistencies when the SDK and headers refer to DLSS-RR. Sometimes function calls are suffixed
+with `_D` to refer to the DLSS-RR functions. The functions without the suffix actually only apply to DLSS, which is the
 older supersampling-antialising solution. Sometimes the DLSS-RR feature is also referred to by just "RayReconstruction".
 
 The two wrapper classes don't cover all functionality DLSS-RR can offer (refer to the [*DLSS-RR Integration Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS-RR%20Integration%20Guide%20API.pdf) to learn
 about additional guide buffers and settings), but are small enough to be quickly adopted and modified for your own needs.
-Beware that the DLSS Integration Guide is thought to be addendum to the [*DLSS Programming Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS_Programming_Guide_Release.pdf)
+Beware that the DLSS-RR Integration Guide is thought to be addendum to the [*DLSS Programming Guide*](https://github.com/NVIDIA/DLSS/blob/af199869c51cf2d71cc64d3db5064788ff38eb02/doc/DLSS_Programming_Guide_Release.pdf)
 
 Features not covered in this sample
 * Providing more optional guide buffers besides the `RESOURCE_SPECULAR_HITDISTANCE`
@@ -107,7 +107,7 @@ samples. DLSS-RR will take care of the upscaling and compensate for the jitter d
 * You can click on the guide buffers and have them shown in the main viewport instead of the normal render output. This is a nice way to see how noisy and relatively small the input signal actually is.
 * _DLSS RR/Show Buffers Scaled_ gives an idea about the upscaling in place.
 * _DLSS RR/Presets_ and _DLSS RR/Quality_ determine the (AI) model in use and quality setting
-* _DLSS RR/Input Width_ and _DLSS RR/Input Width_ lets you play with the size of the input buffers in the range the chosen quality setting allows for
+* _DLSS RR/Input Width_ and _DLSS RR/Input Height_ lets you play with the size of the input buffers in the range the chosen quality setting allows for
 
 ### Depth values
 
@@ -179,12 +179,12 @@ _Primary Surface Replacement (PSR)_. It looks like as if we can see the mirrored
 though the mirror acts as kind of a portal into a virtual world. The G-Buffer records the data of the PSR at its
 virtual world space, such as Normal, Roughness and ViewZ. This improves denoising reflected objects.
 
-Look into `shaders/primary__rgen.slang` for `#PSR` to find the shader code that implements
+Look into `shaders/primary_rgen.slang` for `#PSR` to find the shader code that implements
 primary surface replacement.
 
 ### MIS weighting
 
-The implemented path tracer uses importance sampling to estimate the integral in the [rendering
+The implemented path tracer uses the Monte Carlo method with importance sampling to estimate the integral in the [rendering
 equation](https://en.wikipedia.org/wiki/Rendering_equation). Care has to be taken when the path tracer samples the same
 function multiple times, but uses different PDFs when doing so. This sample is built such that, at the primary hit and
 each segment of the indirect path, we sample the environment map for its direct light contribution at that point. It
