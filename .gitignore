@@ -8,3 +8,5 @@ externals/*
 .cache/*
 _downloaded_resources/*
 _autogen/
+_bin/
+_install/
