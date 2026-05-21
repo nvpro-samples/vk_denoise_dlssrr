@@ -92,6 +92,7 @@ public:
   struct DlssRRInitInfo
   {
     VkExtent2D                                     inputSize  = {};  // dimensions of the noisy input textures.
+                                                                     // (You may render to a subrectangle of these)
     VkExtent2D                                     outputSize = {};  // dimensions of the output after denoising.
     NVSDK_NGX_PerfQuality_Value                    quality    = NVSDK_NGX_PerfQuality_Value_MaxQuality;
     NVSDK_NGX_RayReconstruction_Hint_Render_Preset preset     = NVSDK_NGX_RayReconstruction_Hint_Render_Preset_Default;

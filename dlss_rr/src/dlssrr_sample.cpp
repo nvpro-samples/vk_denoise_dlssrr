@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2024-2026, NVIDIA CORPORATION.  All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -265,33 +265,14 @@ public:
       m_renderSize = {m_dlssSizes.optimalSize.width, m_dlssSizes.optimalSize.height};
     }
 
-    {
-      std::vector<VkExtensionProperties> extensions;
-      m_ngx.getDlssRRRequiredInstanceExtensions(extensions);
+    createInputGbuffers({m_dlssSizes.maxSize.width, m_dlssSizes.maxSize.height});
 
-      for(auto& e : extensions)
-      {
-        std::cout << e.extensionName << std::endl;
-      }
-    }
-
-    {
-      std::vector<VkExtensionProperties> extensions;
-      m_ngx.getDlssRRRequiredDeviceExtensions(m_app->getInstance(), m_app->getPhysicalDevice(), extensions);
-      std::cout << "Device Extensions " << std::endl;
-      for(auto& e : extensions)
-      {
-        std::cout << e.extensionName << std::endl;
-      }
-    }
-
-    NGX_ABORT_ON_FAIL(m_ngx.initDlssRR({.inputSize  = {m_renderSize.x, m_renderSize.y},
+    NGX_ABORT_ON_FAIL(m_ngx.initDlssRR({.inputSize  = {m_renderBuffers.getSize()},
                                         .outputSize = {m_outputSize.x, m_outputSize.y},
                                         .quality    = m_dlssQuality,
                                         .preset     = m_dlssPreset},
                                        m_dlss));
 
-    createInputGbuffers(m_renderSize);
   }
 
   void setDlssResources()
@@ -517,7 +498,7 @@ public:
             bool  renderResolutionChange = false;
             int   width                  = (int)m_renderSize.x;
             int   height                 = (int)m_renderSize.y;
-            float aspect                 = (float)m_dlssSizes.optimalSize.width / (float)m_dlssSizes.optimalSize.height;
+            float aspect                 = (float)width / (float)height;
 
             auto slider = [&](int& value, int minValue, int maxValue) {
               ImGui::Text("%d", minValue);
@@ -538,6 +519,7 @@ public:
               height                 = int((float)width / aspect);
               renderResolutionChange = true;
             }
+            height = glm::clamp(height, (int)m_dlssSizes.minSize.height, (int)m_dlssSizes.maxSize.height);
 
             bool heightChanged = PropertyEditor::entry(
                 "Input Height",
@@ -550,6 +532,7 @@ public:
               width                  = (int)((float)height * aspect);
               renderResolutionChange = true;
             }
+            width = glm::clamp(width, (int)m_dlssSizes.minSize.width, (int)m_dlssSizes.maxSize.width);
 
             if(renderResolutionChange)
             {
@@ -649,7 +632,7 @@ public:
     NVVK_DBG_SCOPE(cmd);
 
     // Get camera info
-    float view_aspect_ratio = (float)m_outputSize.x / m_outputSize.y;
+    double view_aspect_ratio = (double)m_renderSize.x / m_renderSize.y;
 
     m_frameInfo.prevMVP = m_frameInfo.proj * m_frameInfo.view;
 
@@ -1146,10 +1129,10 @@ private:
       return;
 
     ImGui::Begin("Viewport");  // ImGui, picking within "viewport"
-    auto  mouse_pos        = ImGui::GetMousePos();
-    auto  main_size        = ImGui::GetContentRegionAvail();
-    auto  corner           = ImGui::GetCursorScreenPos();  // Corner of the viewport
-    float aspect_ratio     = main_size.x / main_size.y;
+    auto   mouse_pos       = ImGui::GetMousePos();
+    auto   main_size       = ImGui::GetContentRegionAvail();
+    auto   corner          = ImGui::GetCursorScreenPos();  // Corner of the viewport
+    double aspect_ratio    = main_size.x / main_size.y;
     mouse_pos              = mouse_pos - corner;
     ImVec2 local_mouse_pos = mouse_pos / main_size;
     ImGui::End();
@@ -1158,7 +1141,7 @@ private:
 
     // Finding current camera matrices
     const auto& view = m_cameraManip->getViewMatrix();
-    auto        proj = glm::perspectiveRH_ZO(glm::radians(m_cameraManip->getFov()), aspect_ratio, 0.1F, 1000.0F);
+    auto        proj = glm::perspectiveRH_ZO(glm::radians(m_cameraManip->getFov()), aspect_ratio, 0.1, 1000.0);
     proj[1][1] *= -1;
 
     // Setting up the data to do picking
@@ -1188,9 +1171,9 @@ private:
 
     // Find where the hit point is and set the interest position
     glm::vec3 world_pos = glm::vec3(pr.worldRayOrigin + pr.worldRayDirection * pr.hitT);
-    glm::vec3 eye;
-    glm::vec3 center;
-    glm::vec3 up;
+    glm::dvec3 eye;
+    glm::dvec3 center;
+    glm::dvec3 up;
     m_cameraManip->getLookat(eye, center, up);
     m_cameraManip->setLookat(eye, world_pos, up, false);
 
@@ -1224,10 +1207,8 @@ private:
     m_pushConst.skyParams = (shaderio::SkyPhysicalParameters*)m_skyParamBuffer.address;
     vkCmdPushConstants(cmd, m_rtPipelineLayout, VK_SHADER_STAGE_ALL, 0, sizeof(shaderio::RtxPushConstant), &m_pushConst);
 
-    const auto& size = m_renderBuffers.getSize();
-
     const auto& sbtRegions = m_sbt.getSBTRegions(0);
-    vkCmdTraceRaysKHR(cmd, &sbtRegions.raygen, &sbtRegions.miss, &sbtRegions.hit, &sbtRegions.callable, size.width, size.height, 1);
+    vkCmdTraceRaysKHR(cmd, &sbtRegions.raygen, &sbtRegions.miss, &sbtRegions.hit, &sbtRegions.callable, m_renderSize.x, m_renderSize.y, 1);
   }
 
   void createHdr(const std::filesystem::path& filename)

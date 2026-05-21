@@ -7,7 +7,7 @@ project(vk_denoise_dlssrr LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(NvproCore2 REQUIRED)
 
-set(DLSS_VERSION "310.5.3" CACHE STRING "DLSS version to download.")
+set(DLSS_VERSION "310.6.0" CACHE STRING "DLSS version to download.")
 
 # NGX (DLSS) dependency
 find_package(NGX REQUIRED)
